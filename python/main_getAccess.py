@@ -2,7 +2,7 @@ import json
 import os
 import requests
 import time
-import APIauth
+import api
 
 # Initial Settings
 client_id = '15198'  # app name id
@@ -45,7 +45,7 @@ with open('strava_tokens.json', 'r') as tokens:
   data = json.load(tokens)
 
 refresh_token = data['refresh_token']
-strava_tokens = APIauth.refresh_token(
+strava_tokens = api.refresh_token(
   client_id = client_id,
   client_secret = client_secret,
   refresh_token = refresh_token)
