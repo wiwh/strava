@@ -18,28 +18,23 @@ expires_at = datetime.fromtimestamp(strava_tokens['expires_at'])
 now = datetime.now()
 
 
-### Refresh if it expires in the next minute
-##if (expires_at - now).total_seconds() < 10000000:
-##  strava_tokens = api.refresh_token(
-##    client_id = client_id,
-##    client_secret = client_secret,
-##    refresh_token = refresh_token
-##  )
-##  with open('strava_tokens.json', 'w') as outfile:
-##    json.dump(strava_tokens, outfile)
+# # Refresh if it expires in the next minute
+# if (expires_at - now).total_seconds() < 10000000:
+#   strava_tokens = api.refresh_token(
+#     client_id = client_id,
+#     client_secret = client_secret,
+#     refresh_token = refresh_token
+#   )
+#   with open('strava_tokens.json', 'w') as outfile:
+#     json.dump(strava_tokens, outfile)
 
 access_token = strava_tokens['access_token']
 
 # get all activities
+# all_activities = api.get_all_activities(access_token)
 
-activities = api.get_activities(access_token)
-
- 
-all_activities = api.get_all_activities(access_token)
-activity =  api.get_streams(8008474669, access_token)
-
-with open("all_activities.json", "w") as outfile:
-    json.dump(all_activities, outfile)
+# with open("all_activities.json", "w") as outfile:
+#     json.dump(all_activities, outfile)
 
 with open("all_activities.json", "r") as infile:
     all_activities = json.load(infile)
@@ -47,14 +42,17 @@ with open("all_activities.json", "r") as infile:
 # get all activities id
 activities_id = [act['id'] for act in all_activities]
 
-all_streams = api.get_all_streams(activities_id, access_token)
+all_activity_details = api.get_all_activity_details(activities_id, access_token)
 
-with open("all_streams.json", "w") as outfile:
-   json.dump(all_streams, outfile)
+with open("../data/all_activities_details.json", "w") as outfile:
+  json.dump(all_activity_details, outfile)
+
+# all_streams = api.get_all_streams(activities_id, access_token)
+# with open("all_streams.json", "w") as outfile:
+#    json.dump(all_streams, outfile)
 
 with open("all_streams.json", "r") as infile:
   all_streams = json.load(infile)
-
 
 df = processing.all_streams2df(all_streams)
 df.to_csv("all_activities_df.csv")
