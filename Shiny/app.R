@@ -5,9 +5,7 @@ require(bslib)
 require(DT)
 require(shinyjs)
 
-
-
-if(!("data_load" %in% ls())) data_load <- read_csv("../data/all_activities_df.csv")
+#data_load <- read_csv("../data/all_activities_df.csv")
 
 data_load$activity_id <- as.factor(data_load$activity_id)
 
@@ -155,20 +153,24 @@ server <- function(input, output) {
   puissance_moy <- round(mean(data$watts, na.rm = T), 2)
   
 
-    mat <- matrix(c(paste(distance_tot, "km"),
-                    paste(floor(temps_heure),"h", 
-                          round((temps_heure - floor(temps_heure)) * 60, 0), "min"),
-                    paste(vitesse_moy, "km/h"),
-                    paste(max(vitesse_inst), "km/h"),
-                    paste(puissance_moy, "watts")),
-                  nrow = 5, byrow = T)
-
-    df <- data.frame(mat,
-                     row.names = c("Distance totale",
-                                   "Durée totale",
-                                   "Vitesse moyenne", 
-                                   "Vitesse max",
-                                   "Puissance moyenne"))
+  
+  
+  mat <- matrix(c(paste(distance_tot, "km"),
+                  paste(floor(temps_heure),"h", 
+                        round((temps_heure - floor(temps_heure)) * 60, 0), "min"),
+                  paste(vitesse_moy, "km/h"),
+                  paste(max(vitesse_inst), "km/h"),
+                  paste(puissance_moy, "watts"),
+                  paste(num_act)),
+                nrow = 6, byrow = T)
+  
+  df <- data.frame(mat,
+                   row.names = c("Distance totale",
+                                 "Durée totale",
+                                 "Vitesse moyenne", 
+                                 "Vitesse max",
+                                 "Puissance moyenne",
+                                 "Numéro d'activité"))
     
     noms <- c("Sommaire")
     names(df) <- noms
