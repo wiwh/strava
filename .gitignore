@@ -131,3 +131,4 @@ dmypy.json
 # large files
 *.json
 *.csv
+Shiny/.Rhistory
