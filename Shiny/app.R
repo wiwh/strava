@@ -11,7 +11,7 @@ data_load$activity_id <- as.factor(data_load$activity_id)
 
 activity_id <- unique(data_load$activity_id)
 
-data_maxspd <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+data_maxkm <- data_load %>% group_by(activity_id) %>% summarise_all(max)
 
 data_mean <- data_load %>%
   group_by(activity_id) %>% 
@@ -20,8 +20,8 @@ data_mean <- data_mean %>% group_by(activity_id) %>% summarise_all(mean, na.rm =
 data_mean <- data_mean[(!is.nan(data_mean$watts)), ]
 
 
-data_maxpwr <- data_load %>% group_by(activity_id) %>% summarise_all(max)
-data_maxpwr <- data_maxpwr[data_maxpwr$distance > 15000, ]
+data_maxspd <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+data_maxspd <- data_maxspd[data_maxspd$distance > 15000, ]
 
 
 library(shiny)
@@ -93,7 +93,7 @@ server <- function(input, output) {
     
         
     if (input$actchoice == "Plus longue"){
-      num_act <- unique(data_load$activity_id)[which.max(data_maxspd$distance)]
+      num_act <- data_maxkm$activity_id[which.max(data_maxkm$distance)]
     } 
     
     if (input$actchoice == "Plus puissante moyenne"){
@@ -103,11 +103,11 @@ server <- function(input, output) {
     
     if (input$actchoice == "Plus vite moyenne, min 15km"){
      
-      distance_tot <- data_maxpwr$distance / 1000
-      temps_heure <- data_maxpwr$time / 3600
+      distance_tot <- data_maxspd$distance / 1000
+      temps_heure <- data_maxspd$time / 3600
       vitesse_moy <- round(distance_tot / temps_heure, 2)
       
-      num_act <- data_maxpwr$activity_id[which.max(vitesse_moy)]
+      num_act <- data_maxspd$activity_id[which.max(vitesse_moy)]
     }
 
         
@@ -131,27 +131,20 @@ server <- function(input, output) {
   output$table <- renderTable(rownames = TRUE, width = 450,
 {
   if (input$actchoice == "Plus longue"){
-    data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
-    num_act <- data_max$activity_id[which.max(data_max$distance)]
+    num_act <- data_maxkm$activity_id[which.max(data_maxkm$distance)]
   } 
   
   if (input$actchoice == "Plus puissante moyenne"){
-    data_mean <- data_load %>%
-      group_by(activity_id) %>% 
-      select(activity_id, watts)
-    data_mean <- data_mean %>% group_by(activity_id) %>% summarise_all(mean, na.rm = T)
-    data_mean <- data_mean[(!is.nan(data_mean$watts)), ]
     num_act <- data_mean$activity_id[which.max(data_mean$watts)]
   }
   
   if (input$actchoice == "Plus vite moyenne, min 15km"){
-    data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
-    data_max <- data_max[data_max$distance > 15000, ]
-    distance_tot <- data_max$distance / 1000
-    temps_heure <- data_max$time / 3600
+
+    distance_tot <- data_maxspd$distance / 1000
+    temps_heure <- data_maxspd$time / 3600
     vitesse_moy <- round(distance_tot / temps_heure, 2)
     
-    num_act <- data_max$activity_id[which.max(vitesse_moy)]
+    num_act <- data_maxspd$activity_id[which.max(vitesse_moy)]
   }
   
   data <- data_load %>%
