@@ -4,6 +4,8 @@ require(bslib)
 require(DT)
 require(shinyjs)
 
+
+
 # data_load <- read_csv("all_activities_df.csv")
 
 data_load$activity_id <- as.factor(data_load$activity_id)
@@ -21,7 +23,7 @@ ui <- navbarPage("vitesse", selected = "vitesse",
                     column(4,
                            selectInput(inputId = "actchoice",
                                        label = "Choisir STAT activité",
-                                       choices = c("Plus longue" = "pluslongue",
+                                       choices = c("Plus longue",
                                                    "Plus puissante moyenne",
                                                    "Plus vite moyenne, min 15km"), 
                                        selected = "Plus longue"),
@@ -70,10 +72,30 @@ server <- function(input, output) {
   output$graph <- renderPlot({
     
         
-        
-        data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
-        
-        num_act <- unique(data_load$activity_id)[which.max(data_max$distance)]
+    if (input$actchoice == "Plus longue"){
+      data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+      num_act <- unique(data_load$activity_id)[which.max(data_max$distance)]
+    } 
+    
+    if (input$actchoice == "Plus puissante moyenne"){
+      data_mean <- data_load %>%
+        group_by(activity_id) %>% 
+        select(activity_id, watts)
+      data_mean <- data_mean %>% group_by(activity_id) %>% summarise_all(mean, na.rm = T)
+      data_mean <- data_mean[(!is.nan(data_mean$watts)), ]
+      num_act <- data_mean$activity_id[which.max(data_mean$watts)]
+    }
+    
+    if (input$actchoice == "Plus vite moyenne, min 15km"){
+      data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+      data_max <- data_max[data_max$distance > 15000, ]
+      distance_tot <- data_max$distance / 1000
+      temps_heure <- data_max$time / 3600
+      vitesse_moy <- round(distance_tot / temps_heure, 2)
+      
+      num_act <- data_max$activity_id[which.max(vitesse_moy)]
+    }
+
         
         
 
@@ -93,17 +115,35 @@ server <- function(input, output) {
   })
   
   output$table <- renderTable(rownames = TRUE, width = 450,
-                              {
-                                data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
-                                
-                                num_act <- unique(data_load$activity_id)[which.max(data_max$distance)]
-                                
-                                
-                                
-                                data <- data_load %>%
-                                  filter(activity_id == num_act) %>% 
-                                  select(watts, heartrate, velocity_smooth, distance, moving, time, altitude)
-                                
+{
+  if (input$actchoice == "Plus longue"){
+    data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+    num_act <- data_max$activity_id[which.max(data_max$distance)]
+  } 
+  
+  if (input$actchoice == "Plus puissante moyenne"){
+    data_mean <- data_load %>%
+      group_by(activity_id) %>% 
+      select(activity_id, watts)
+    data_mean <- data_mean %>% group_by(activity_id) %>% summarise_all(mean, na.rm = T)
+    data_mean <- data_mean[(!is.nan(data_mean$watts)), ]
+    num_act <- data_mean$activity_id[which.max(data_mean$watts)]
+  }
+  
+  if (input$actchoice == "Plus vite moyenne, min 15km"){
+    data_max <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+    data_max <- data_max[data_max$distance > 15000, ]
+    distance_tot <- data_max$distance / 1000
+    temps_heure <- data_max$time / 3600
+    vitesse_moy <- round(distance_tot / temps_heure, 2)
+    
+    num_act <- data_max$activity_id[which.max(vitesse_moy)]
+  }
+  
+  data <- data_load %>%
+    filter(activity_id == num_act) %>% 
+    select(watts, heartrate, velocity_smooth, distance, moving, time, altitude)
+  
   
   distance_tot <- diff(range(data$distance)) / 1000
   temps_heure <- diff(range(data$time)) / 3600
@@ -111,18 +151,23 @@ server <- function(input, output) {
   
   vitesse_inst <- round((diff(data$distance) / 1000) / 
                           (diff(data$time) / 3600), 2)
-  
+  puissance_moy <- round(mean(data$watts, na.rm = T), 2)
   
 
     mat <- matrix(c(paste(distance_tot, "km"),
+                    paste(floor(temps_heure),"h", 
+                          round((temps_heure - floor(temps_heure)) * 60, 0), "min"),
                     paste(vitesse_moy, "km/h"),
-                    paste(max(vitesse_inst), "km/h")),
-                  nrow = 3, byrow = T)
+                    paste(max(vitesse_inst), "km/h"),
+                    paste(puissance_moy, "watts")),
+                  nrow = 5, byrow = T)
 
     df <- data.frame(mat,
-                     row.names = c("Distance totale", 
+                     row.names = c("Distance totale",
+                                   "Durée totale",
                                    "Vitesse moyenne", 
-                                   "Vitesse max"))
+                                   "Vitesse max",
+                                   "Puissance moyenne"))
     
     noms <- c("Sommaire")
     names(df) <- noms
