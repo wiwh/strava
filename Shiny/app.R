@@ -1,3 +1,4 @@
+library(tidyverse)
 require(ggplot2)
 require(wesanderson)
 require(bslib)
@@ -6,7 +7,7 @@ require(shinyjs)
 
 
 
-# data_load <- read_csv("all_activities_df.csv")
+if(!("data_load" %in% ls())) data_load <- read_csv("../data/all_activities_df.csv")
 
 data_load$activity_id <- as.factor(data_load$activity_id)
 
