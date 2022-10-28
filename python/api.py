@@ -32,7 +32,7 @@ def get_all_activities(access_token):
     page += 1
     print(f"Fetching data on page {page}.")
     new_activities = get_activities(access_token, page=page) 
-    if len(new_activities) == 0:
+    if (len(new_activities) == 0) or (type(new_activities) is dict):
       break
     else:
       activities += new_activities
