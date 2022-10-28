@@ -58,8 +58,8 @@ ui <- navbarPage("vitesse", selected = "vitesse",
                     ),
                     column(6, sliderInput(inputId = "rolling", 
                                           label = "Rolling",
-                                          min = 2, 
-                                          max = 500, value = 30)
+                                          min = 10, 
+                                          max = 500, value = 100, step = 10)
                            ),
                   ),
                   fluidRow(
@@ -120,6 +120,7 @@ server <- function(input, output) {
         filter(activity_id == num_act) %>% 
         select(watts, heartrate, velocity_smooth, distance, moving, time, altitude)
       
+      data <- data %>% replace_na(list(watts = 0, heartrate = 0))
       
       
       data_rolled <- tibble(rollmean(data$watts,
@@ -132,11 +133,23 @@ server <- function(input, output) {
       
       names(data_rolled) <- c("watts", "heartrate", "time")
       
+      coeff <- 1 /( diff(range(data_rolled$watts)) / diff(range(data_rolled$heartrate)))
+      
+      
+      
       ggplot(data = data_rolled, aes(x = time)) +
         geom_line(aes_string(y = input$statchoice1, 
                              colour = input$statchoice1)) +
         scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
         geom_line(aes_string(y = input$statchoice2), color = "red") +
+        scale_y_continuous(
+          
+          # Features of the first axis
+          name = "First Axis",
+          
+          # Add a second axis and specify its features
+          sec.axis = sec_axis(~.*coeff, name="Second Axis")
+        ) +
         theme_bw()
 
   })
