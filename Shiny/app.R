@@ -4,8 +4,9 @@ require(wesanderson)
 require(bslib)
 require(DT)
 require(shinyjs)
+library(zoo)
 
-if(!("data_load" %in% ls())) data_load <- read_csv("../data/all_activities_df.csv")
+# if(!("data_load" %in% ls())) data_load <- read_csv("../data/all_activities_df.csv")
 data_load$activity_id <- as.factor(data_load$activity_id)
 
 activity_id <- unique(data_load$activity_id)
@@ -45,18 +46,21 @@ ui <- navbarPage("vitesse", selected = "vitesse",
                            selectInput(inputId = "statchoice1",
                                        label = "Choisir stat",
                                        choices = c("Puissance" = "watts",
-                                                   "FC" = "heartrate",
-                                                   "Distance" = "distance"), 
+                                                   "FC" = "heartrate"), 
                                        selected = "watts"),
                     ),
                     column(2,
                            selectInput(inputId = "statchoice2",
                                        label = "Choisir stat 2",
                                        choices = c("Puissance" = "watts",
-                                                   "FC" = "heartrate",
-                                                   "Distance" = "distance"), 
+                                                   "FC" = "heartrate"), 
                                        selected = "heartrate"),
                     ),
+                    column(6, sliderInput(inputId = "rolling", 
+                                          label = "Rolling",
+                                          min = 2, 
+                                          max = 500, value = 30)
+                           ),
                   ),
                   fluidRow(
                  
@@ -118,10 +122,20 @@ server <- function(input, output) {
       
       
       
+      data_rolled <- tibble(rollmean(data$watts,
+                                     input$rolling, 
+                                     align = "left"),
+                            rollmean(data$heartrate, 
+                                     input$rolling, 
+                                     align = "left"),
+                            data$time[-(1:(input$rolling - 1))]) 
       
+      names(data_rolled) <- c("watts", "heartrate", "time")
       
-      ggplot(data = data, aes(x = time)) +
-        geom_line(aes_string(y = input$statchoice1)) +
+      ggplot(data = data_rolled, aes(x = time)) +
+        geom_line(aes_string(y = input$statchoice1, 
+                             colour = input$statchoice1)) +
+        scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
         geom_line(aes_string(y = input$statchoice2), color = "red") +
         theme_bw()
 
