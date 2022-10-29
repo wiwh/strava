@@ -23,13 +23,47 @@ data_mean <- data_mean[(!is.nan(data_mean$watts)), ]
 data_maxspd <- data_load %>% group_by(activity_id) %>% summarise_all(max)
 data_maxspd <- data_maxspd[data_maxspd$distance > 15000, ]
 
+# data_load[data_load$activity_id == activity_id[555],]$watts
+# 
+# data_load <- data_load %>% replace_na(list(watts = 0, heartrate = 0))
+# 
+# data_filter <- data_load %>% group_by(activity_id) %>% summarise_all(max)
+# 
+# pwr <- rep(0, length = max(data_filter$time))
+# 
+# activity_id_watts <- activity_id[data_filter$watts > 0]
+# 
+# for (i in seq_along(activity_id_watts)){
+#   data_test <- data_load %>%
+#     filter(activity_id == activity_id_watts[i]) %>% 
+#     select(watts)
+#   
+#   seq_along(data_test$watts)
+#   
+#   pwr[seq_along(data_test$watts)]
+#   
+#   
+#   for (j in seq_along(data_test$watts)){
+#     print(paste(i, j))
+#     verif <- max(rollmean(x = data_test$watts, k = j))
+#     if (verif > pwr[j]) pwr[j] <-  verif
+#   }
+#   
+#   
+# }
+# 
+# 
+
+  
+
+
 
 library(shiny)
 
-ui <- navbarPage("vitesse", selected = "vitesse",
+ui <- navbarPage("STRAVA STATS", selected = "Top activité",
                  theme = bs_theme(version = 4, bootswatch = "minty"),
                  useShinyjs(),
-                 tabPanel("vitesse", 
+                 tabPanel("Top activité", 
                   fluidRow(
                     column(4,
                            selectInput(inputId = "actchoice",
@@ -38,10 +72,45 @@ ui <- navbarPage("vitesse", selected = "vitesse",
                                                    "Plus puissante moyenne",
                                                    "Plus vite moyenne, min 15km"), 
                                        selected = "Plus longue"),
+                           ),
+                    column(2,
+                           selectInput(inputId = "coulmin",
+                                       label = "Choisir couleur min",
+                                       choices = c("Bleu" = "blue",
+                                                   "Rouge" = "red",
+                                                   "Jaune" = "yellow",
+                                                   "Orange" = "orange",
+                                                   "Pourpre" = "purple",
+                                                   "Vert" = "green",
+                                                   "Cyan" = "cyan"), 
+                                       selected = "blue"),
+                    ),
+                    column(2,
+                           selectInput(inputId = "coulmax",
+                                       label = "Choisir couleur max",
+                                       choices = c("Bleu" = "blue",
+                                                   "Rouge" = "red",
+                                                   "Jaune" = "yellow",
+                                                   "Orange" = "orange",
+                                                   "Pourpre" = "purple",
+                                                   "Vert" = "green",
+                                                   "Cyan" = "cyan"),
+                                       selected = "yellow"),
+                    ),
+                    column(2,
+                           selectInput(inputId = "coulfc",
+                                       label = "Choisir couleur FC",
+                                       choices = c("Bleu" = "blue",
+                                                   "Rouge" = "red",
+                                                   "Jaune" = "yellow",
+                                                   "Orange" = "orange",
+                                                   "Pourpre" = "purple",
+                                                   "Vert" = "green",
+                                                   "Cyan" = "cyan"),
+                                       selected = "red"),
                     ),
                   ),
                   fluidRow(
-
                     column(2,
                            selectInput(inputId = "statchoice1",
                                        label = "Choisir stat",
@@ -68,16 +137,16 @@ ui <- navbarPage("vitesse", selected = "vitesse",
                            column(3,
                                   tableOutput(outputId = "table"),
                            ),
-    
                   ),
-                  fluidRow(
-                    
-                    uiOutput("link")
-                    
                     ),
-                    
-                  )
-                  
+                 tabPanel("Top", 
+                          fluidRow(
+                            column(4, "This is something"
+   
+                            ),
+                          ),
+
+                 )
                
                
 
@@ -133,22 +202,26 @@ server <- function(input, output) {
       
       names(data_rolled) <- c("watts", "heartrate", "time")
       
-      coeff <- 1 /( diff(range(data_rolled$watts)) / diff(range(data_rolled$heartrate)))
       
+      coeff <- (diff(range(data_rolled$watts)) / 
+                      diff(range(data_rolled$heartrate)))
+      int <- range(data_rolled$watts)[1] - coeff * range(data_rolled$heartrate)[1]
       
+
       
       ggplot(data = data_rolled, aes(x = time)) +
         geom_line(aes_string(y = input$statchoice1, 
                              colour = input$statchoice1)) +
-        scale_colour_gradient(low = "yellow", high = "red", na.value = NA) +
-        geom_line(aes_string(y = input$statchoice2), color = "red") +
+        scale_colour_gradient(low = input$coulmin, high = input$coulmax, 
+                              na.value = NA) +
+        geom_line(aes_string(y = input$statchoice2), color = input$coulfc) +
         scale_y_continuous(
           
           # Features of the first axis
           name = "First Axis",
           
           # Add a second axis and specify its features
-          sec.axis = sec_axis(~.*coeff, name="Second Axis")
+          sec.axis = sec_axis(~ (. - int)/coeff, name="Second Axis")
         ) +
         theme_bw()
 
