@@ -6,6 +6,7 @@ require(DT)
 require(shinyjs)
 library(zoo)
 
+
 # if(!("data_load" %in% ls())) data_load <- read_csv("../data/all_activities_df.csv")
 data_load$activity_id <- as.factor(data_load$activity_id)
 
@@ -74,8 +75,8 @@ ui <- navbarPage("STRAVA STATS", selected = "Top activité",
                                        selected = "Plus longue"),
                            ),
                     column(2,
-                           selectInput(inputId = "coulmin",
-                                       label = "Choisir couleur min",
+                           selectInput(inputId = "coulWmin",
+                                       label = "Choisir couleur min W",
                                        choices = c("Bleu" = "blue",
                                                    "Rouge" = "red",
                                                    "Jaune" = "yellow",
@@ -86,8 +87,8 @@ ui <- navbarPage("STRAVA STATS", selected = "Top activité",
                                        selected = "blue"),
                     ),
                     column(2,
-                           selectInput(inputId = "coulmax",
-                                       label = "Choisir couleur max",
+                           selectInput(inputId = "coulWmax",
+                                       label = "Choisir couleur max W",
                                        choices = c("Bleu" = "blue",
                                                    "Rouge" = "red",
                                                    "Jaune" = "yellow",
@@ -98,8 +99,20 @@ ui <- navbarPage("STRAVA STATS", selected = "Top activité",
                                        selected = "yellow"),
                     ),
                     column(2,
-                           selectInput(inputId = "coulfc",
-                                       label = "Choisir couleur FC",
+                           selectInput(inputId = "coulFCmin",
+                                       label = "Choisir couleur min FC",
+                                       choices = c("Bleu" = "blue",
+                                                   "Rouge" = "red",
+                                                   "Jaune" = "yellow",
+                                                   "Orange" = "orange",
+                                                   "Pourpre" = "purple",
+                                                   "Vert" = "green",
+                                                   "Cyan" = "cyan"), 
+                                       selected = "blue"),
+                    ),
+                    column(2,
+                           selectInput(inputId = "coulFCmax",
+                                       label = "Choisir couleur max FC",
                                        choices = c("Bleu" = "blue",
                                                    "Rouge" = "red",
                                                    "Jaune" = "yellow",
@@ -107,7 +120,7 @@ ui <- navbarPage("STRAVA STATS", selected = "Top activité",
                                                    "Pourpre" = "purple",
                                                    "Vert" = "green",
                                                    "Cyan" = "cyan"),
-                                       selected = "red"),
+                                       selected = "yellow"),
                     ),
                   ),
                   fluidRow(
@@ -133,7 +146,8 @@ ui <- navbarPage("STRAVA STATS", selected = "Top activité",
                   ),
                   fluidRow(
                  
-                           plotOutput(outputId = "graph"),
+                           plotOutput(outputId = "graphW"),
+                           plotOutput(outputId = "graphFC"),
                            column(3,
                                   tableOutput(outputId = "table"),
                            ),
@@ -161,7 +175,7 @@ server <- function(input, output) {
   
   # Generate a plot of the requested variable against mpg ----
   # and only exclude outliers if requested
-  output$graph <- renderPlot({
+  output$graphW <- renderPlot({
     
         
     if (input$actchoice == "Plus longue"){
@@ -203,29 +217,67 @@ server <- function(input, output) {
       names(data_rolled) <- c("watts", "heartrate", "time")
       
       
-      coeff <- (diff(range(data_rolled$watts)) / 
-                      diff(range(data_rolled$heartrate)))
-      int <- range(data_rolled$watts)[1] - coeff * range(data_rolled$heartrate)[1]
-      
-
-      
       ggplot(data = data_rolled, aes(x = time)) +
         geom_line(aes_string(y = input$statchoice1, 
                              colour = input$statchoice1)) +
-        scale_colour_gradient(low = input$coulmin, high = input$coulmax, 
+        scale_colour_gradient(low = input$coulWmin, high = input$coulWmax, 
                               na.value = NA) +
-        geom_line(aes_string(y = input$statchoice2), color = input$coulfc) +
-        scale_y_continuous(
-          
-          # Features of the first axis
-          name = "First Axis",
-          
-          # Add a second axis and specify its features
-          sec.axis = sec_axis(~ (. - int)/coeff, name="Second Axis")
-        ) +
         theme_bw()
 
   })
+  
+  
+  output$graphFC <- renderPlot({
+    
+    
+    if (input$actchoice == "Plus longue"){
+      num_act <- data_maxkm$activity_id[which.max(data_maxkm$distance)]
+    } 
+    
+    if (input$actchoice == "Plus puissante moyenne"){
+      
+      num_act <- data_mean$activity_id[which.max(data_mean$watts)]
+    }
+    
+    if (input$actchoice == "Plus vite moyenne, min 15km"){
+      
+      distance_tot <- data_maxspd$distance / 1000
+      temps_heure <- data_maxspd$time / 3600
+      vitesse_moy <- round(distance_tot / temps_heure, 2)
+      
+      num_act <- data_maxspd$activity_id[which.max(vitesse_moy)]
+    }
+    
+    
+    
+    
+    data <- data_load %>%
+      filter(activity_id == num_act) %>% 
+      select(watts, heartrate, velocity_smooth, distance, moving, time, altitude)
+    
+    data <- data %>% replace_na(list(watts = 0, heartrate = 0))
+    
+    
+    data_rolled <- tibble(rollmean(data$watts,
+                                   input$rolling, 
+                                   align = "left"),
+                          rollmean(data$heartrate, 
+                                   input$rolling, 
+                                   align = "left"),
+                          data$time[-(1:(input$rolling - 1))]) 
+    
+    names(data_rolled) <- c("watts", "heartrate", "time")
+    
+    
+    ggplot(data = data_rolled, aes(x = time)) +
+      geom_line(aes_string(y = input$statchoice2, 
+                           colour = input$statchoice2)) +
+      scale_colour_gradient(low = input$coulFCmin, high = input$coulFCmax, 
+                            na.value = NA) +
+      theme_bw()
+    
+  })
+  
   
   output$table <- renderTable(rownames = TRUE, width = 450,
 {
